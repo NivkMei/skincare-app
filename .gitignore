@@ -1,0 +1,27 @@
+# ── Flutter / Dart ────────────────────────────────────────────────────────────
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+app/.idea/
+app/*.iml
+app/.fvm/
+app/pubspec.lock
+
+# ── Node.js / Backend ─────────────────────────────────────────────────────────
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/*.log
+backend/npm-debug.log*
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
