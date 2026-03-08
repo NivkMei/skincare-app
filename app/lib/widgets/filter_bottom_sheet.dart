@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/product_provider.dart';
-import '../data/mock_products.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   const FilterBottomSheet({super.key});
@@ -28,9 +27,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ['', ...allCategories];
-    final functionalities = allFunctionalities;
-    final brands = ['', ...allBrands];
+    final productProvider = context.read<ProductProvider>();
+    final categories = ['', ...productProvider.allCategories];
+    final functionalities = productProvider.allFunctionalities;
+    final brands = ['', ...productProvider.allBrands];
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,

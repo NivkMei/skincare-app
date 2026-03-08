@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../data/mock_products.dart';
 import '../providers/country_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
@@ -173,7 +172,9 @@ class ProductListScreen extends StatelessWidget {
           ),
           // Product Grid
           Expanded(
-            child: products.isEmpty
+            child: productProvider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : products.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -190,6 +191,13 @@ class ProductListScreen extends StatelessWidget {
                         Text('Try adjusting your search or filters',
                             style: TextStyle(
                                 color: Colors.grey[400], fontSize: 13)),
+                        if (productProvider.error != null) ...
+                          [
+                            const SizedBox(height: 8),
+                            Text(productProvider.error!,
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 12)),
+                          ],
                       ],
                     ),
                   )
@@ -260,7 +268,9 @@ class _CategoryChipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isTypeMode = productProvider.categoryMode == CategoryMode.productType;
-    final chips = isTypeMode ? allCategories : allFunctionalities;
+    final chips = isTypeMode
+        ? productProvider.allCategories
+        : productProvider.allFunctionalities;
     final selectedChip = isTypeMode
         ? productProvider.selectedCategory
         : productProvider.selectedFunctionality;

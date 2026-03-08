@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 import 'providers/country_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/favorites_provider.dart';
@@ -16,6 +17,7 @@ class SkincareApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CountryProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
@@ -40,8 +42,34 @@ class SkincareApp extends StatelessWidget {
             indicatorColor: Color(0xFFFCE4EC),
           ),
         ),
-        home: const HomeScreen(),
+        home: const _AppRoot(),
       ),
     );
   }
 }
+
+/// Triggers the first product load once the country is known.
+class _AppRoot extends StatefulWidget {
+  const _AppRoot();
+
+  @override
+  State<_AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<_AppRoot> {
+  bool _initialLoadDone = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      final country = context.read<CountryProvider>().selectedCountry.code;
+      context.read<ProductProvider>().loadProducts(country);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => const HomeScreen();
+}
+

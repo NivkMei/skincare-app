@@ -16,58 +16,71 @@ router.get('/', async (req, res) => {
   } = req.query as Record<string, string>;
 
   const params: unknown[] = [];
-  const conditions: string[] = [];
+  const havingConditions: string[] = [];
+  const whereConditions: string[] = [];
   let paramIdx = 1;
 
+  const countryCode = country ? country.toUpperCase() : null;
+
+  // Base SELECT — include price/currency via subquery when country is specified
   let sql = `
-    SELECT DISTINCT
+    SELECT
       p.id, p.name, p.brand, p.category, p.functionalities,
       p.description, p.ingredients, p.image_url, p.created_at,
       COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
       COUNT(DISTINCT r.id)::int AS review_count
+      ${countryCode ? `, (
+          SELECT MIN(pa_price.price) FROM product_availability pa_price
+          JOIN countries c_price ON c_price.id = pa_price.country_id
+          WHERE pa_price.product_id = p.id AND c_price.code = $${paramIdx}
+        ) AS price,
+        (
+          SELECT MAX(pa_cur.currency) FROM product_availability pa_cur
+          JOIN countries c_cur ON c_cur.id = pa_cur.country_id
+          WHERE pa_cur.product_id = p.id AND c_cur.code = $${paramIdx}
+        ) AS currency` : ''}
     FROM products p
     LEFT JOIN reviews r ON r.product_id = p.id
   `;
 
-  // Join availability tables only when country/maxPrice filter is active
-  if (country || maxPrice) {
-    sql += `
-    JOIN product_availability pa ON pa.product_id = p.id
-    JOIN countries c ON c.id = pa.country_id
-    `;
-    if (country) {
-      conditions.push(`c.code = $${paramIdx++}`);
-      params.push(country.toUpperCase());
-    }
+  if (countryCode) {
+    params.push(countryCode);
+    paramIdx++;
+    // Filter to only products available in this country
+    whereConditions.push(`EXISTS (
+      SELECT 1 FROM product_availability pa_f
+      JOIN countries c_f ON c_f.id = pa_f.country_id
+      WHERE pa_f.product_id = p.id AND c_f.code = $${paramIdx - 1}
+      ${maxPrice ? `AND pa_f.price <= $${paramIdx}` : ''}
+    )`);
     if (maxPrice) {
-      conditions.push(`pa.price <= $${paramIdx++}`);
       params.push(Number(maxPrice));
+      paramIdx++;
     }
   }
 
   if (category) {
-    conditions.push(`p.category = $${paramIdx++}`);
+    whereConditions.push(`p.category = $${paramIdx++}`);
     params.push(category);
   }
 
   if (functionality) {
-    conditions.push(`$${paramIdx++} = ANY(p.functionalities)`);
+    whereConditions.push(`$${paramIdx++} = ANY(p.functionalities)`);
     params.push(functionality);
   }
 
   if (brand) {
-    conditions.push(`p.brand ILIKE $${paramIdx++}`);
+    whereConditions.push(`p.brand ILIKE $${paramIdx++}`);
     params.push(`%${brand}%`);
   }
 
   if (search) {
-    conditions.push(`(p.name ILIKE $${paramIdx} OR p.brand ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx})`);
+    whereConditions.push(`(p.name ILIKE $${paramIdx} OR p.brand ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx})`);
     params.push(`%${search}%`);
     paramIdx++;
   }
 
-  if (conditions.length > 0) sql += ` WHERE ${conditions.join(' AND ')}`;
-
+  if (whereConditions.length > 0) sql += ` WHERE ${whereConditions.join(' AND ')}`;
   sql += ` GROUP BY p.id`;
 
   // Pagination
