@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/favorites_provider.dart';
+import '../data/ingredient_data.dart';
 
 class ProductDetailScreen extends StatelessWidget {
   final Product product;
@@ -238,49 +239,8 @@ class ProductDetailScreen extends StatelessWidget {
                   const Text('Ingredients',
                       style: TextStyle(
                           fontSize: 17, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Full ingredient list:',
-                    style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic),
-                  ),
-                  const SizedBox(height: 8),
-                  ...product.ingredients.asMap().entries.map((entry) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 22,
-                            height: 22,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: Colors.pink.shade50,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '${entry.key + 1}',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.pink[400],
-                                  fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(entry.value,
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey[800],
-                                    height: 1.4)),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+                  const SizedBox(height: 12),
+                  _IngredientTable(ingredients: product.ingredients),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -318,3 +278,214 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 }
+
+// ── CosDNA-style ingredient table ─────────────────────────────────────────
+class _IngredientTable extends StatelessWidget {
+  final List<String> ingredients;
+  const _IngredientTable({required this.ingredients});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        children: [
+          // Header row
+          Container(
+            color: Colors.grey.shade100,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                const SizedBox(width: 22),
+                const SizedBox(width: 8),
+                const Expanded(
+                  flex: 5,
+                  child: Text('Ingredient',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black54)),
+                ),
+                _headerCell('Function', flex: 5),
+                _headerCell('Acne\nRisk', flex: 2, center: true),
+                _headerCell('Irritant', flex: 2, center: true),
+                _headerCell('Safety', flex: 2, center: true),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE0E0E0)),
+          // Data rows
+          ...ingredients.asMap().entries.map((entry) {
+            final index = entry.key;
+            final name = entry.value;
+            final info = lookupIngredient(name);
+            final isEven = index.isEven;
+            return Column(
+              children: [
+                Container(
+                  color: isEven ? Colors.white : Colors.grey.shade50,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Row number
+                      Container(
+                        width: 22,
+                        height: 22,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.pink.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.pink[400],
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Ingredient name
+                      Expanded(
+                        flex: 5,
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                              height: 1.3),
+                        ),
+                      ),
+                      // Function
+                      Expanded(
+                        flex: 5,
+                        child: Text(
+                          info?.function ?? '—',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: info != null
+                                  ? Colors.grey[700]
+                                  : Colors.grey[400],
+                              height: 1.3),
+                        ),
+                      ),
+                      // Acne Risk badge
+                      Expanded(
+                        flex: 2,
+                        child: Center(
+                          child: _ratingBadge(
+                            info?.acneRisk,
+                            type: _BadgeType.acne,
+                          ),
+                        ),
+                      ),
+                      // Irritant badge
+                      Expanded(
+                        flex: 2,
+                        child: Center(
+                          child: _ratingBadge(
+                            info?.irritant,
+                            type: _BadgeType.irritant,
+                          ),
+                        ),
+                      ),
+                      // Safety badge
+                      Expanded(
+                        flex: 2,
+                        child: Center(
+                          child: _ratingBadge(
+                            info?.safety,
+                            type: _BadgeType.safety,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (index < ingredients.length - 1)
+                  const Divider(height: 1, color: Color(0xFFF0F0F0)),
+              ],
+            );
+          }),
+          // Legend
+          Container(
+            color: Colors.grey.shade50,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 12, color: Colors.grey),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Acne Risk & Irritant: 0 = none, 5 = high  ·  Safety: 1 = low concern, 5 = high concern',
+                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _headerCell(String label, {int flex = 1, bool center = false}) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        label,
+        textAlign: center ? TextAlign.center : TextAlign.start,
+        style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Colors.black54),
+      ),
+    );
+  }
+
+  Widget _ratingBadge(int? value, {required _BadgeType type}) {
+    if (value == null) {
+      return Text('—',
+          style: TextStyle(fontSize: 11, color: Colors.grey[400]));
+    }
+    final color = _badgeColor(value, type);
+    return Container(
+      width: 26,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        '$value',
+        style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: color),
+      ),
+    );
+  }
+
+  Color _badgeColor(int value, _BadgeType type) {
+    if (type == _BadgeType.safety) {
+      if (value <= 2) return const Color(0xFF27AE60);
+      if (value <= 3) return const Color(0xFFF39C12);
+      return const Color(0xFFE74C3C);
+    } else {
+      // acneRisk / irritant: 0 = green, 1-2 = yellow, 3+ = red
+      if (value == 0) return const Color(0xFF27AE60);
+      if (value <= 2) return const Color(0xFFF39C12);
+      return const Color(0xFFE74C3C);
+    }
+  }
+}
+
+enum _BadgeType { acne, irritant, safety }

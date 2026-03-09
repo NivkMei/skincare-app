@@ -99,9 +99,14 @@ CREATE TRIGGER trg_reviews_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ── Indexes ──────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_products_brand    ON products(brand);
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
-CREATE INDEX IF NOT EXISTS idx_pa_product        ON product_availability(product_id);
-CREATE INDEX IF NOT EXISTS idx_pa_country        ON product_availability(country_id);
-CREATE INDEX IF NOT EXISTS idx_reviews_product   ON reviews(product_id);
-CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_products_name_brand ON products (lower(name), lower(brand));
+CREATE INDEX IF NOT EXISTS idx_products_brand       ON products(brand);
+CREATE INDEX IF NOT EXISTS idx_products_brand_name  ON products(brand, name);
+CREATE INDEX IF NOT EXISTS idx_products_category    ON products(category);
+CREATE INDEX IF NOT EXISTS idx_pa_product           ON product_availability(product_id);
+CREATE INDEX IF NOT EXISTS idx_pa_product_id        ON product_availability(product_id);
+CREATE INDEX IF NOT EXISTS idx_pa_country           ON product_availability(country_id);
+CREATE INDEX IF NOT EXISTS idx_pa_country_id        ON product_availability(country_id);
+CREATE INDEX IF NOT EXISTS idx_countries_code       ON countries(code);
+CREATE INDEX IF NOT EXISTS idx_reviews_product      ON reviews(product_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_user       ON favorites(user_id);

@@ -22,23 +22,25 @@ class ApiService {
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
 
+  static const _timeout = Duration(seconds: 10);
+
   Future<dynamic> _get(String path, {Map<String, String>? query}) async {
     final uri = Uri.parse('$baseUrl$path')
         .replace(queryParameters: query);
-    final res = await http.get(uri, headers: _headers);
+    final res = await http.get(uri, headers: _headers).timeout(_timeout);
     return _handle(res);
   }
 
   Future<dynamic> _post(String path, Map<String, dynamic> body) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await http.post(uri,
-        headers: _headers, body: jsonEncode(body));
+        headers: _headers, body: jsonEncode(body)).timeout(_timeout);
     return _handle(res);
   }
 
   Future<dynamic> _delete(String path) async {
     final uri = Uri.parse('$baseUrl$path');
-    final res = await http.delete(uri, headers: _headers);
+    final res = await http.delete(uri, headers: _headers).timeout(_timeout);
     if (res.statusCode == 204) return null;
     return _handle(res);
   }

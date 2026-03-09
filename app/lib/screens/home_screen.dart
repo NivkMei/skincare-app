@@ -33,10 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
             index: _currentIndex,
             children: _screens,
           ),
-          // Floating profile button (top-right)
+          // Floating profile button (top-left)
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
-            right: 12,
+            left: 12,
             child: _ProfileButton(auth: auth),
           ),
         ],
