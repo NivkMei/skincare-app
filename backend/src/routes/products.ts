@@ -15,83 +15,79 @@ router.get('/', async (req, res) => {
     page = '1', limit = '20',
   } = req.query as Record<string, string>;
 
+  const countryCode = country ? country.toUpperCase() : null;
+  const pageNum = Math.max(1, parseInt(page, 10));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+  const offset = (pageNum - 1) * limitNum;
+
+  // Build params and WHERE clauses shared between count + data queries
   const params: unknown[] = [];
-  const havingConditions: string[] = [];
   const whereConditions: string[] = [];
   let paramIdx = 1;
 
-  const countryCode = country ? country.toUpperCase() : null;
-
-  // Base SELECT — include price/currency via subquery when country is specified
-  let sql = `
-    SELECT
-      p.id, p.name, p.brand, p.category, p.functionalities,
-      p.description, p.ingredients, p.image_url, p.created_at,
-      COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
-      COUNT(DISTINCT r.id)::int AS review_count
-      ${countryCode ? `, (
-          SELECT MIN(pa_price.price) FROM product_availability pa_price
-          JOIN countries c_price ON c_price.id = pa_price.country_id
-          WHERE pa_price.product_id = p.id AND c_price.code = $${paramIdx}
-        ) AS price,
-        (
-          SELECT MAX(pa_cur.currency) FROM product_availability pa_cur
-          JOIN countries c_cur ON c_cur.id = pa_cur.country_id
-          WHERE pa_cur.product_id = p.id AND c_cur.code = $${paramIdx}
-        ) AS currency` : ''}
-    FROM products p
-    LEFT JOIN reviews r ON r.product_id = p.id
-  `;
-
+  // JOIN to filter by country (replaces correlated subqueries)
+  let fromClause: string;
   if (countryCode) {
     params.push(countryCode);
     paramIdx++;
-    // Filter to only products available in this country
-    whereConditions.push(`EXISTS (
-      SELECT 1 FROM product_availability pa_f
-      JOIN countries c_f ON c_f.id = pa_f.country_id
-      WHERE pa_f.product_id = p.id AND c_f.code = $${paramIdx - 1}
-      ${maxPrice ? `AND pa_f.price <= $${paramIdx}` : ''}
-    )`);
+    fromClause = `
+      FROM products p
+      JOIN product_availability pa ON pa.product_id = p.id
+      JOIN countries c ON c.id = pa.country_id AND c.code = $1
+      LEFT JOIN reviews r ON r.product_id = p.id
+    `;
     if (maxPrice) {
+      whereConditions.push(`pa.price <= $${paramIdx++}`);
       params.push(Number(maxPrice));
-      paramIdx++;
     }
+  } else {
+    fromClause = `
+      FROM products p
+      LEFT JOIN reviews r ON r.product_id = p.id
+    `;
   }
 
   if (category) {
     whereConditions.push(`p.category = $${paramIdx++}`);
     params.push(category);
   }
-
   if (functionality) {
     whereConditions.push(`$${paramIdx++} = ANY(p.functionalities)`);
     params.push(functionality);
   }
-
   if (brand) {
     whereConditions.push(`p.brand ILIKE $${paramIdx++}`);
     params.push(`%${brand}%`);
   }
-
   if (search) {
     whereConditions.push(`(p.name ILIKE $${paramIdx} OR p.brand ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx})`);
     params.push(`%${search}%`);
     paramIdx++;
   }
 
-  if (whereConditions.length > 0) sql += ` WHERE ${whereConditions.join(' AND ')}`;
-  sql += ` GROUP BY p.id`;
+  const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
-  // Pagination
-  const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
-  const offset = (pageNum - 1) * limitNum;
+  // Efficient count via COUNT(DISTINCT p.id) — no subquery wrapping
+  const countSql = `SELECT COUNT(DISTINCT p.id) ${fromClause} ${whereClause}`;
 
-  const countSql = `SELECT COUNT(*) FROM (${sql}) sub`;
+  // Data query — JOIN-based price/currency, no correlated subqueries
+  const dataSql = `
+    SELECT
+      p.id, p.name, p.brand, p.category, p.functionalities,
+      p.description, p.ingredients, p.image_url, p.created_at,
+      COALESCE(AVG(DISTINCT r.rating), 0)::numeric(3,1) AS avg_rating,
+      COUNT(DISTINCT r.id)::int AS review_count
+      ${countryCode ? ', MIN(pa.price) AS price, MAX(pa.currency) AS currency' : ''}
+    ${fromClause}
+    ${whereClause}
+    GROUP BY p.id
+    ORDER BY p.brand, p.name
+    LIMIT ${limitNum} OFFSET ${offset}
+  `;
+
   const [countResult, dataResult] = await Promise.all([
     pool.query(countSql, params),
-    pool.query(sql + ` ORDER BY p.brand, p.name LIMIT ${limitNum} OFFSET ${offset}`, params),
+    pool.query(dataSql, params),
   ]);
 
   res.json({
