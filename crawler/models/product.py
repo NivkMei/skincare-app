@@ -6,6 +6,7 @@ from typing import Optional, List
 @dataclass
 class IngredientDetail:
     name: str
+    name_zh: str = ""                  # Traditional Chinese name (繁體中文)
     function: Optional[str] = None
     acne_risk: Optional[int] = None   # 0 (none) – 5 (high)
     irritant: Optional[int] = None    # 0 (none) – 5 (high)
@@ -22,7 +23,13 @@ class ProductData:
     ingredients: List[str] = field(default_factory=list)
     ingredient_details: List[IngredientDetail] = field(default_factory=list)
     image_url: str = ""
-
+    # Traditional Chinese fields (繁體中文)
+    name_zh: str = ""
+    brand_zh: str = ""
+    category_zh: str = ""
+    functionalities_zh: List[str] = field(default_factory=list)
+    description_zh: str = ""
+    ingredients_zh: List[str] = field(default_factory=list)
     # availability (per-run)
     country_code: str = ""
     store_name: str = ""

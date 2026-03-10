@@ -36,18 +36,35 @@ CREATE TABLE IF NOT EXISTS stores (
 
 -- ── Products ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS products (
-  id              SERIAL PRIMARY KEY,
-  name            TEXT NOT NULL,
-  brand           TEXT NOT NULL,
-  category        TEXT NOT NULL,          -- product type: Cleanser, Serum, etc.
-  functionalities TEXT[] NOT NULL DEFAULT '{}',
-  description     TEXT NOT NULL DEFAULT '',
-  ingredients     TEXT[] NOT NULL DEFAULT '{}',
-  image_url       TEXT NOT NULL DEFAULT '',
-  is_active       BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at      TIMESTAMPTZ DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ DEFAULT NOW()
+  id                  SERIAL PRIMARY KEY,
+  -- English fields
+  name                TEXT NOT NULL,
+  brand               TEXT NOT NULL,
+  category            TEXT NOT NULL,          -- product type: Cleanser, Serum, etc.
+  functionalities     TEXT[] NOT NULL DEFAULT '{}',
+  description         TEXT NOT NULL DEFAULT '',
+  ingredients         TEXT[] NOT NULL DEFAULT '{}',
+  -- Traditional Chinese fields (繁體中文)
+  name_zh             TEXT NOT NULL DEFAULT '',
+  brand_zh            TEXT NOT NULL DEFAULT '',
+  category_zh         TEXT NOT NULL DEFAULT '',
+  functionalities_zh  TEXT[] NOT NULL DEFAULT '{}',
+  description_zh      TEXT NOT NULL DEFAULT '',
+  ingredients_zh      TEXT[] NOT NULL DEFAULT '{}',
+  -- Other
+  image_url           TEXT NOT NULL DEFAULT '',
+  is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration: add zh columns to existing databases
+ALTER TABLE products ADD COLUMN IF NOT EXISTS name_zh            TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS brand_zh           TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS category_zh        TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS functionalities_zh TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS description_zh     TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS ingredients_zh     TEXT[] NOT NULL DEFAULT '{}';
 
 -- Trigger: auto-update updated_at
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -99,10 +116,15 @@ CREATE TRIGGER trg_reviews_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ── Indexes ──────────────────────────────────────────────────
-CREATE UNIQUE INDEX IF NOT EXISTS uq_products_name_brand ON products (lower(name), lower(brand));
-CREATE INDEX IF NOT EXISTS idx_products_brand       ON products(brand);
-CREATE INDEX IF NOT EXISTS idx_products_brand_name  ON products(brand, name);
-CREATE INDEX IF NOT EXISTS idx_products_category    ON products(category);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_products_name_brand    ON products (lower(name), lower(brand));
+CREATE INDEX IF NOT EXISTS idx_products_brand               ON products(brand);
+CREATE INDEX IF NOT EXISTS idx_products_brand_name          ON products(brand, name);
+CREATE INDEX IF NOT EXISTS idx_products_category            ON products(category);
+-- Trigram indexes for Chinese text search (requires pg_trgm)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS idx_products_name_zh_trgm        ON products USING GIN (name_zh gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_brand_zh_trgm       ON products USING GIN (brand_zh gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_description_zh_trgm ON products USING GIN (description_zh gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_pa_product           ON product_availability(product_id);
 CREATE INDEX IF NOT EXISTS idx_pa_product_id        ON product_availability(product_id);
 CREATE INDEX IF NOT EXISTS idx_pa_country           ON product_availability(country_id);

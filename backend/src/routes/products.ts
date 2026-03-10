@@ -61,7 +61,10 @@ router.get('/', async (req, res, next) => {
     params.push(`%${brand}%`);
   }
   if (search) {
-    whereConditions.push(`(p.name ILIKE $${paramIdx} OR p.brand ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx})`);
+    whereConditions.push(
+      `(p.name ILIKE $${paramIdx} OR p.brand ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx}` +
+      ` OR p.name_zh ILIKE $${paramIdx} OR p.brand_zh ILIKE $${paramIdx} OR p.description_zh ILIKE $${paramIdx})`
+    );
     params.push(`%${search}%`);
     paramIdx++;
   }
@@ -173,14 +176,27 @@ router.post(
     body('description').trim().notEmpty(),
     body('ingredients').isArray(),
     body('image_url').optional().isURL(),
+    body('name_zh').optional().trim(),
+    body('brand_zh').optional().trim(),
+    body('category_zh').optional().trim(),
+    body('functionalities_zh').optional().isArray(),
+    body('description_zh').optional().trim(),
+    body('ingredients_zh').optional().isArray(),
   ],
   validate,
   asyncHandler(async (req, res) => {
-    const { name, brand, category, functionalities, description, ingredients, image_url } = req.body as Record<string, unknown>;
+    const {
+      name, brand, category, functionalities, description, ingredients, image_url,
+      name_zh = '', brand_zh = '', category_zh = '', functionalities_zh = [],
+      description_zh = '', ingredients_zh = [],
+    } = req.body as Record<string, unknown>;
     const result = await pool.query(
-      `INSERT INTO products (name, brand, category, functionalities, description, ingredients, image_url)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [name, brand, category, functionalities, description, ingredients, image_url]
+      `INSERT INTO products
+         (name, brand, category, functionalities, description, ingredients, image_url,
+          name_zh, brand_zh, category_zh, functionalities_zh, description_zh, ingredients_zh)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [name, brand, category, functionalities, description, ingredients, image_url,
+       name_zh, brand_zh, category_zh, functionalities_zh, description_zh, ingredients_zh]
     );
     res.status(201).json({ product: result.rows[0] });
   })
@@ -197,7 +213,10 @@ router.put(
     const { id } = req.params;
     const fields = req.body as Record<string, unknown>;
 
-    const allowed = ['name','brand','category','functionalities','description','ingredients','image_url'];
+    const allowed = [
+      'name','brand','category','functionalities','description','ingredients','image_url',
+      'name_zh','brand_zh','category_zh','functionalities_zh','description_zh','ingredients_zh',
+    ];
     const setClauses: string[] = [];
     const values: unknown[] = [];
     let idx = 1;

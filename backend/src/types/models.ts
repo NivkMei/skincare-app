@@ -26,12 +26,21 @@ export interface Store {
 
 export interface Product {
   id: number;
+  // English
   name: string;
   brand: string;
   category: string;        // product type
   functionalities: string[];
   description: string;
   ingredients: string[];
+  // Traditional Chinese (繁體中文) — empty string/array when not provided
+  name_zh: string;
+  brand_zh: string;
+  category_zh: string;
+  functionalities_zh: string[];
+  description_zh: string;
+  ingredients_zh: string[];
+  // Other
   image_url: string;
   is_active: boolean;
   created_at: Date;

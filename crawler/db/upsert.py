@@ -27,8 +27,10 @@ def upsert_product(data: ProductData, verbose: bool = True) -> int:
                     """
                     INSERT INTO products
                         (name, brand, category, functionalities, description,
-                         ingredients, image_url)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                         ingredients, image_url,
+                         name_zh, brand_zh, category_zh, functionalities_zh,
+                         description_zh, ingredients_zh)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (lower(name), lower(brand)) DO NOTHING
                     RETURNING id
                     """,
@@ -40,6 +42,12 @@ def upsert_product(data: ProductData, verbose: bool = True) -> int:
                         data.description,
                         data.ingredients,
                         data.image_url,
+                        data.name_zh,
+                        data.brand_zh,
+                        data.category_zh,
+                        data.functionalities_zh,
+                        data.description_zh,
+                        data.ingredients_zh,
                     ),
                 )
                 row = cur.fetchone()
@@ -52,10 +60,16 @@ def upsert_product(data: ProductData, verbose: bool = True) -> int:
                     cur.execute(
                         """
                         UPDATE products
-                        SET functionalities = %s,
-                            description     = CASE WHEN description = '' THEN %s ELSE description END,
-                            ingredients     = CASE WHEN array_length(ingredients,1) IS NULL THEN %s ELSE ingredients END,
-                            image_url       = CASE WHEN image_url = '' THEN %s ELSE image_url END
+                        SET functionalities    = %s,
+                            description        = CASE WHEN description = '' THEN %s ELSE description END,
+                            ingredients        = CASE WHEN array_length(ingredients,1) IS NULL THEN %s ELSE ingredients END,
+                            image_url          = CASE WHEN image_url = '' THEN %s ELSE image_url END,
+                            name_zh            = CASE WHEN name_zh = '' THEN %s ELSE name_zh END,
+                            brand_zh           = CASE WHEN brand_zh = '' THEN %s ELSE brand_zh END,
+                            category_zh        = CASE WHEN category_zh = '' THEN %s ELSE category_zh END,
+                            functionalities_zh = CASE WHEN array_length(functionalities_zh,1) IS NULL THEN %s ELSE functionalities_zh END,
+                            description_zh     = CASE WHEN description_zh = '' THEN %s ELSE description_zh END,
+                            ingredients_zh     = CASE WHEN array_length(ingredients_zh,1) IS NULL THEN %s ELSE ingredients_zh END
                         WHERE lower(name) = lower(%s) AND lower(brand) = lower(%s)
                         RETURNING id
                         """,
@@ -64,6 +78,12 @@ def upsert_product(data: ProductData, verbose: bool = True) -> int:
                             data.description,
                             data.ingredients,
                             data.image_url,
+                            data.name_zh,
+                            data.brand_zh,
+                            data.category_zh,
+                            data.functionalities_zh,
+                            data.description_zh,
+                            data.ingredients_zh,
                             data.name,
                             data.brand,
                         ),
