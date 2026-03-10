@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { validationResult } from 'express-validator';
 
 // Validates express-validator results and short-circuits with 422 if invalid
@@ -10,6 +10,12 @@ export const validate = (req: Request, res: Response, next: NextFunction): void 
   }
   next();
 };
+
+// Wraps async route handlers so errors are forwarded to the Express error handler
+export const asyncHandler =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler =>
+  (req, res, next) =>
+    Promise.resolve(fn(req, res, next)).catch(next);
 
 // Global error handler — mount last in Express
 export const errorHandler = (

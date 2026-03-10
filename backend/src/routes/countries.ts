@@ -1,24 +1,24 @@
 import { Router, Request, Response } from "express";
 import { param } from 'express-validator';
 import pool from '../config/database';
-import { validate } from '../middleware/errorHandler';
+import { validate, asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
 // GET /api/countries
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', asyncHandler(async (_req: Request, res: Response) => {
   const result = await pool.query(
     'SELECT id, code, name, flag, currency FROM countries ORDER BY name'
   );
   res.json({ countries: result.rows });
-});
+}));
 
 // GET /api/countries/:code
 router.get(
   '/:code',
   [param('code').trim().isLength({ min: 2, max: 5 })],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const code = req.params.code.toUpperCase();
     const result = await pool.query(
       'SELECT id, code, name, flag, currency FROM countries WHERE code=$1',
@@ -29,7 +29,7 @@ router.get(
       return;
     }
     res.json({ country: result.rows[0] });
-  }
+  })
 );
 
 // GET /api/countries/:code/stores
@@ -37,7 +37,7 @@ router.get(
   '/:code/stores',
   [param('code').trim().isLength({ min: 2, max: 5 })],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const code = req.params.code.toUpperCase();
     const result = await pool.query(
       `SELECT s.id, s.name, s.type, s.website_url
@@ -48,7 +48,7 @@ router.get(
       [code]
     );
     res.json({ stores: result.rows });
-  }
+  })
 );
 
 export default router;

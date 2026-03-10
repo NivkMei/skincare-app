@@ -3,7 +3,7 @@ import { body } from 'express-validator';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database';
-import { validate, errorHandler } from '../middleware/errorHandler';
+import { validate, asyncHandler } from '../middleware/errorHandler';
 import { authenticate } from '../middleware/auth';
 import { User } from '../types/models';
 
@@ -18,7 +18,7 @@ router.post(
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   ],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { name, email, password } = req.body as { name: string; email: string; password: string };
 
     const existing = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
@@ -42,7 +42,7 @@ router.post(
     );
 
     res.status(201).json({ token, user });
-  }
+  })
 );
 
 // POST /api/auth/login
@@ -53,7 +53,7 @@ router.post(
     body('password').notEmpty().withMessage('Password is required'),
   ],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { email, password } = req.body as { email: string; password: string };
 
     const result = await pool.query<User & { password_hash: string }>(
@@ -81,11 +81,11 @@ router.post(
 
     const { password_hash, ...safeUser } = user;
     res.json({ token, user: safeUser });
-  }
+  })
 );
 
 // GET /api/auth/me
-router.get('/me', authenticate, async (req, res) => {
+router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const result = await pool.query<User>(
     'SELECT id, email, name, role, created_at FROM users WHERE id=$1',
     [req.user!.id]
@@ -97,6 +97,6 @@ router.get('/me', authenticate, async (req, res) => {
   }
 
   res.json({ user: result.rows[0] });
-});
+}));
 
 export default router;

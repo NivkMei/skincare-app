@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { param } from 'express-validator';
 import pool from '../config/database';
 import { authenticate } from '../middleware/auth';
-import { validate } from '../middleware/errorHandler';
+import { validate, asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
@@ -10,7 +10,7 @@ const router = Router();
 router.use(authenticate);
 
 // GET /api/favorites
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const result = await pool.query(
     `SELECT p.id, p.name, p.brand, p.category, p.functionalities,
             p.description, p.image_url,
@@ -26,14 +26,14 @@ router.get('/', async (req, res) => {
     [req.user!.id]
   );
   res.json({ favorites: result.rows });
-});
+}));
 
 // POST /api/favorites/:productId
 router.post(
   '/:productId',
   [param('productId').isInt()],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const productId = parseInt(req.params.productId, 10);
     const userId = req.user!.id;
 
@@ -51,7 +51,7 @@ router.post(
     );
 
     res.status(204).send();
-  }
+  })
 );
 
 // DELETE /api/favorites/:productId
@@ -59,13 +59,13 @@ router.delete(
   '/:productId',
   [param('productId').isInt()],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     await pool.query(
       'DELETE FROM favorites WHERE user_id=$1 AND product_id=$2',
       [req.user!.id, req.params.productId]
     );
     res.status(204).send();
-  }
+  })
 );
 
 export default router;

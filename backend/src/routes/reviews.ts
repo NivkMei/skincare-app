@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, param } from 'express-validator';
 import pool from '../config/database';
 import { authenticate, requireAdmin } from '../middleware/auth';
-import { validate } from '../middleware/errorHandler';
+import { validate, asyncHandler } from '../middleware/errorHandler';
 
 const router = Router({ mergeParams: true });
 
@@ -11,7 +11,7 @@ router.get(
   '/',
   [param('productId').isInt()],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { productId } = req.params;
 
     const result = await pool.query(
@@ -32,7 +32,7 @@ router.get(
     );
 
     res.json({ reviews: result.rows, ...aggregate.rows[0] });
-  }
+  })
 );
 
 // POST /api/products/:productId/reviews  (authenticated, one per user)
@@ -45,7 +45,7 @@ router.post(
     body('comment').optional().trim().isLength({ max: 2000 }),
   ],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { productId } = req.params;
     const { rating, comment } = req.body as { rating: number; comment?: string };
     const userId = req.user!.id;
@@ -67,7 +67,7 @@ router.post(
     );
 
     res.status(201).json({ review: result.rows[0] });
-  }
+  })
 );
 
 // PUT /api/reviews/:id  (own review)
@@ -80,7 +80,7 @@ router.put(
     body('comment').optional().trim().isLength({ max: 2000 }),
   ],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user!.id;
     const isAdmin = req.user!.role === 'admin';
@@ -106,7 +106,7 @@ router.put(
     );
 
     res.json({ review: result.rows[0] });
-  }
+  })
 );
 
 // DELETE /api/reviews/:id  (own review or admin)
@@ -115,7 +115,7 @@ router.delete(
   authenticate,
   [param('id').isInt()],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user!.id;
     const isAdmin = req.user!.role === 'admin';
@@ -132,7 +132,7 @@ router.delete(
 
     await pool.query('DELETE FROM reviews WHERE id=$1', [id]);
     res.status(204).send();
-  }
+  })
 );
 
 export default router;

@@ -172,51 +172,61 @@ class ProductListScreen extends StatelessWidget {
           ),
           // Product Grid
           Expanded(
-            child: productProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : products.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+            child: RefreshIndicator(
+              color: Colors.pink,
+              onRefresh: () => productProvider.loadProducts(country.code),
+              child: productProvider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : products.isEmpty
+                  ? ListView(
                       children: [
-                        Icon(Icons.search_off,
-                            size: 64, color: Colors.grey[300]),
-                        const SizedBox(height: 12),
-                        Text('No products found',
-                            style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 4),
-                        Text('Try adjusting your search or filters',
-                            style: TextStyle(
-                                color: Colors.grey[400], fontSize: 13)),
-                        if (productProvider.error != null) ...
-                          [
-                            const SizedBox(height: 8),
-                            Text(productProvider.error!,
-                                style: const TextStyle(
-                                    color: Colors.red, fontSize: 12)),
-                          ],
+                        SizedBox(
+                          height: 400,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.search_off,
+                                    size: 64, color: Colors.grey[300]),
+                                const SizedBox(height: 12),
+                                Text('No products found',
+                                    style: TextStyle(
+                                        color: Colors.grey[500],
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500)),
+                                const SizedBox(height: 4),
+                                Text('Pull down to refresh',
+                                    style: TextStyle(
+                                        color: Colors.grey[400], fontSize: 13)),
+                                if (productProvider.error != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(productProvider.error!,
+                                      style: const TextStyle(
+                                          color: Colors.red, fontSize: 12)),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(12),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.50,
+                      ),
+                      itemCount: products.length,
+                      itemBuilder: (_, i) => ProductCard(
+                        product: products[i],
+                        countryCode: country.code,
+                        currency: country.currency,
+                      ),
                     ),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(12),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 0.50,
-                    ),
-                    itemCount: products.length,
-                    itemBuilder: (_, i) => ProductCard(
-                      product: products[i],
-                      countryCode: country.code,
-                      currency: country.currency,
-                    ),
-                  ),
+            ),
           ),
         ],
       ),

@@ -16,6 +16,10 @@ function getPool(): Pool {
     _pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 30000,
+      max: 10,
+      options: '-c statement_timeout=9000',
     });
     _pool.on('error', (err) => {
       console.error('Unexpected PostgreSQL client error', err);

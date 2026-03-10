@@ -2,13 +2,14 @@ import { Router, Request, Response } from "express";
 import { body, param, query } from 'express-validator';
 import pool from '../config/database';
 import { authenticate, requireAdmin } from '../middleware/auth';
-import { validate } from '../middleware/errorHandler';
+import { validate, asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
 // GET /api/products
 // Query params: country, category, functionality, brand, maxPrice, search, page, limit
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
+  try {
   const {
     country, category, functionality, brand,
     maxPrice, search,
@@ -96,6 +97,7 @@ router.get('/', async (req, res) => {
     limit: limitNum,
     products: dataResult.rows,
   });
+  } catch (err) { next(err); }
 });
 
 // GET /api/products/:id
@@ -103,7 +105,8 @@ router.get(
   '/:id',
   [param('id').isInt().withMessage('Product id must be an integer')],
   validate,
-  async (req, res) => {
+  async (req, res, next) => {
+    try {
     const { id } = req.params;
 
     const productResult = await pool.query(
@@ -153,6 +156,7 @@ router.get(
     }
 
     res.json({ product: productResult.rows[0], availability: availabilityByCountry });
+    } catch (err) { next(err); }
   }
 );
 
@@ -171,7 +175,7 @@ router.post(
     body('image_url').optional().isURL(),
   ],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { name, brand, category, functionalities, description, ingredients, image_url } = req.body as Record<string, unknown>;
     const result = await pool.query(
       `INSERT INTO products (name, brand, category, functionalities, description, ingredients, image_url)
@@ -179,7 +183,7 @@ router.post(
       [name, brand, category, functionalities, description, ingredients, image_url]
     );
     res.status(201).json({ product: result.rows[0] });
-  }
+  })
 );
 
 // PUT /api/products/:id  (admin)
@@ -189,7 +193,7 @@ router.put(
   requireAdmin,
   [param('id').isInt()],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { id } = req.params;
     const fields = req.body as Record<string, unknown>;
 
@@ -222,7 +226,7 @@ router.put(
     }
 
     res.json({ product: result.rows[0] });
-  }
+  })
 );
 
 // DELETE /api/products/:id  (admin)
@@ -232,14 +236,14 @@ router.delete(
   requireAdmin,
   [param('id').isInt()],
   validate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const result = await pool.query('DELETE FROM products WHERE id=$1 RETURNING id', [req.params.id]);
     if (result.rows.length === 0) {
       res.status(404).json({ message: 'Product not found' });
       return;
     }
     res.status(204).send();
-  }
+  })
 );
 
 export default router;
