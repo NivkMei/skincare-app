@@ -16,14 +16,15 @@ function getPool(): Pool {
     _pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-      connectionTimeoutMillis: 8000,
-      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 15000,
+      idleTimeoutMillis: 60000,
       max: 10,
-      options: '-c statement_timeout=9000',
+      options: '-c statement_timeout=12000',
     });
+    // Log the error but do NOT exit — a transient connection error should not
+    // crash the server and cause Railway to enter a restart loop.
     _pool.on('error', (err) => {
-      console.error('Unexpected PostgreSQL client error', err);
-      process.exit(-1);
+      console.error('Unexpected PostgreSQL client error (non-fatal):', err.message);
     });
   }
   return _pool;
