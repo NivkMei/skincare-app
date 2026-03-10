@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import '../models/product.dart';
-import '../data/mock_products.dart';
 import '../services/api_service.dart';
 
 enum CategoryMode { productType, functionality }
@@ -36,26 +35,14 @@ class ProductProvider extends ChangeNotifier {
       _maxPrice != null;
 
   // ── Derived lists used by filter UI ───────────────────────────
-  List<String> get allCategories {
-    final cats = _products.map((p) => p.category).toSet().toList()..sort();
-    return cats.isNotEmpty
-        ? cats
-        : (mockProducts.map((p) => p.category).toSet().toList()..sort());
-  }
+  List<String> get allCategories =>
+      _products.map((p) => p.category).toSet().toList()..sort();
 
-  List<String> get allFunctionalities {
-    final fns = _products.expand((p) => p.functionalities).toSet().toList()..sort();
-    return fns.isNotEmpty
-        ? fns
-        : (mockProducts.expand((p) => p.functionalities).toSet().toList()..sort());
-  }
+  List<String> get allFunctionalities =>
+      _products.expand((p) => p.functionalities).toSet().toList()..sort();
 
-  List<String> get allBrands {
-    final brands = _products.map((p) => p.brand).toSet().toList()..sort();
-    return brands.isNotEmpty
-        ? brands
-        : (mockProducts.map((p) => p.brand).toSet().toList()..sort());
-  }
+  List<String> get allBrands =>
+      _products.map((p) => p.brand).toSet().toList()..sort();
 
   // ── Fetch from backend ────────────────────────────────────────
   Future<void> loadProducts(String countryCode) async {
@@ -76,10 +63,10 @@ class ProductProvider extends ChangeNotifier {
           .toList();
     } on ApiException catch (e) {
       _error = e.message;
-      _products = mockProducts.where((p) => p.isAvailableIn(countryCode)).toList();
+      _products = [];
     } catch (_) {
-      _error = 'Network error. Showing cached data.';
-      _products = mockProducts.where((p) => p.isAvailableIn(countryCode)).toList();
+      _error = 'Network error. Please check your connection.';
+      _products = [];
     } finally {
       _isLoading = false;
       notifyListeners();

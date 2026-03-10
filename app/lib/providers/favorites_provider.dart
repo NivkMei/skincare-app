@@ -80,9 +80,9 @@ class FavoritesProvider extends ChangeNotifier {
     }
   }
 
-  List<Product> getFavorites(List<Product> allProducts) {
-    if (_isLoggedIn && _apiProducts.isNotEmpty) return _apiProducts;
-    return allProducts.where((p) => _favoriteIds.contains(p.id)).toList();
-  }
+  /// Returns the full Product objects for all current favorites.
+  /// Works for both logged-in users (synced from API) and guests
+  /// (products stored locally when toggled).
+  List<Product> get favorites => List.unmodifiable(_apiProducts);
 }
 

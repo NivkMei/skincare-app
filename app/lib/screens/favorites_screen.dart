@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../data/mock_products.dart';
 import '../providers/country_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../widgets/product_card.dart';
@@ -12,7 +11,7 @@ class FavoritesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final favProvider = context.watch<FavoritesProvider>();
     final country = context.watch<CountryProvider>().selectedCountry;
-    final favorites = favProvider.getFavorites(mockProducts);
+    final favorites = favProvider.favorites;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],

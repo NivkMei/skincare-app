@@ -44,7 +44,7 @@ class Product {
       name: json['name'] as String,
       brand: json['brand'] as String,
       category: json['category'] as String,
-      price: json['price'] != null ? (json['price'] as num).toDouble() : 0,
+      price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
       currency: json['currency'] as String? ?? 'HKD',
       imageUrl: json['image_url'] as String? ?? '',
       description: json['description'] as String? ?? '',
@@ -82,7 +82,7 @@ class Product {
     String currency = 'HKD';
     if (countryCode != null && avail.containsKey(countryCode)) {
       final ca = avail[countryCode] as Map<String, dynamic>;
-      price = (ca['price'] as num?)?.toDouble() ?? 0;
+      price = double.tryParse(ca['price']?.toString() ?? '') ?? 0;
       currency = ca['currency'] as String? ?? 'HKD';
     }
 
