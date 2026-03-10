@@ -5,6 +5,8 @@ import '../services/api_service.dart';
 enum CategoryMode { productType, functionality }
 
 class ProductProvider extends ChangeNotifier {
+  static const int _pageSize = 50;
+
   // ── Filter state ──────────────────────────────────────────────
   String _searchQuery = '';
   CategoryMode _categoryMode = CategoryMode.productType;
@@ -13,11 +15,20 @@ class ProductProvider extends ChangeNotifier {
   String? _selectedBrand;
   double? _maxPrice;
 
-  // ── API state ─────────────────────────────────────────────────
+  // ── Pagination + API state ────────────────────────────────────
   List<Product> _products = [];
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _error;
   String? _lastCountry;
+  int _page = 1;
+  int _total = 0;
+  bool _hasMore = false;
+
+  // Accumulated filter options (grow as pages load)
+  final Set<String> _knownCategories = {};
+  final Set<String> _knownFunctionalities = {};
+  final Set<String> _knownBrands = {};
 
   String get searchQuery => _searchQuery;
   CategoryMode get categoryMode => _categoryMode;
@@ -26,6 +37,9 @@ class ProductProvider extends ChangeNotifier {
   String? get selectedBrand => _selectedBrand;
   double? get maxPrice => _maxPrice;
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMore => _hasMore;
+  int get total => _total;
   String? get error => _error;
 
   bool get hasActiveFilters =>
@@ -35,18 +49,24 @@ class ProductProvider extends ChangeNotifier {
       _maxPrice != null;
 
   // ── Derived lists used by filter UI ───────────────────────────
-  List<String> get allCategories =>
-      _products.map((p) => p.category).toSet().toList()..sort();
+  List<String> get allCategories => _knownCategories.toList()..sort();
+  List<String> get allFunctionalities => _knownFunctionalities.toList()..sort();
+  List<String> get allBrands => _knownBrands.toList()..sort();
 
-  List<String> get allFunctionalities =>
-      _products.expand((p) => p.functionalities).toSet().toList()..sort();
+  // ── Internal helpers ──────────────────────────────────────────
+  void _accumulateFilterOptions(List<Product> products) {
+    for (final p in products) {
+      _knownCategories.add(p.category);
+      _knownBrands.add(p.brand);
+      _knownFunctionalities.addAll(p.functionalities);
+    }
+  }
 
-  List<String> get allBrands =>
-      _products.map((p) => p.brand).toSet().toList()..sort();
-
-  // ── Fetch from backend ────────────────────────────────────────
+  // ── Load page 1 (reset) ───────────────────────────────────────
   Future<void> loadProducts(String countryCode) async {
     _lastCountry = countryCode;
+    _page = 1;
+    _hasMore = false;
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -54,13 +74,22 @@ class ProductProvider extends ChangeNotifier {
     try {
       final data = await apiService.getProducts(
         country: countryCode,
-        limit: 100,
+        page: _page,
+        limit: _pageSize,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        category: _selectedCategory,
+        functionality: _selectedFunctionality,
+        brand: _selectedBrand,
+        maxPrice: _maxPrice,
       );
+      _total = (data['total'] as num?)?.toInt() ?? 0;
       final list = data['products'] as List<dynamic>;
       _products = list
           .map((j) => Product.fromJson(j as Map<String, dynamic>,
               countryCode: countryCode))
           .toList();
+      _accumulateFilterOptions(_products);
+      _hasMore = _products.length < _total;
     } on ApiException catch (e) {
       _error = e.message;
       _products = [];
@@ -73,73 +102,89 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  // ── Client-side filtering on the loaded list ──────────────────
-  List<Product> filteredProducts(String countryCode) {
-    if (_lastCountry != countryCode) {
-      loadProducts(countryCode);
-    }
-    return _products.where((product) {
-      if (_searchQuery.isNotEmpty) {
-        final q = _searchQuery.toLowerCase();
-        if (!product.name.toLowerCase().contains(q) &&
-            !product.brand.toLowerCase().contains(q) &&
-            !product.category.toLowerCase().contains(q) &&
-            !product.functionalities.any((f) => f.toLowerCase().contains(q))) {
-          return false;
-        }
-      }
-      if (_selectedCategory != null && _selectedCategory!.isNotEmpty) {
-        if (product.category != _selectedCategory) return false;
-      }
-      if (_selectedFunctionality != null && _selectedFunctionality!.isNotEmpty) {
-        if (!product.functionalities.contains(_selectedFunctionality)) return false;
-      }
-      if (_selectedBrand != null && _selectedBrand!.isNotEmpty) {
-        if (product.brand != _selectedBrand) return false;
-      }
-      if (_maxPrice != null && product.price > 0 && product.price > _maxPrice!) {
-        return false;
-      }
-      return true;
-    }).toList();
-  }
-
-  // ── Setters ───────────────────────────────────────────────────
-  void search(String query) {
-    _searchQuery = query;
+  // ── Load next page (append) ───────────────────────────────────
+  Future<void> loadMore(String countryCode) async {
+    if (_isLoadingMore || !_hasMore || _isLoading) return;
+    _isLoadingMore = true;
+    _page++;
     notifyListeners();
-  }
 
-  void setCategoryMode(CategoryMode mode) {
-    if (_categoryMode != mode) {
-      _categoryMode = mode;
-      if (mode == CategoryMode.productType) {
-        _selectedFunctionality = null;
-      } else {
-        _selectedCategory = null;
-      }
+    try {
+      final data = await apiService.getProducts(
+        country: countryCode,
+        page: _page,
+        limit: _pageSize,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        category: _selectedCategory,
+        functionality: _selectedFunctionality,
+        brand: _selectedBrand,
+        maxPrice: _maxPrice,
+      );
+      _total = (data['total'] as num?)?.toInt() ?? 0;
+      final list = data['products'] as List<dynamic>;
+      final newProducts = list
+          .map((j) => Product.fromJson(j as Map<String, dynamic>,
+              countryCode: countryCode))
+          .toList();
+      _products.addAll(newProducts);
+      _accumulateFilterOptions(newProducts);
+      _hasMore = _products.length < _total;
+    } catch (_) {
+      _page--; // revert on failure
+    } finally {
+      _isLoadingMore = false;
       notifyListeners();
     }
   }
 
+  // ── Expose loaded list (server already filtered) ──────────────
+  List<Product> filteredProducts(String countryCode) {
+    if (_lastCountry != countryCode) {
+      loadProducts(countryCode);
+    }
+    return _products;
+  }
+
+  // ── Setters (each triggers a fresh load) ─────────────────────
+  void search(String query) {
+    if (_searchQuery == query) return;
+    _searchQuery = query;
+    if (_lastCountry != null) loadProducts(_lastCountry!);
+  }
+
+  void setCategoryMode(CategoryMode mode) {
+    if (_categoryMode == mode) return;
+    _categoryMode = mode;
+    if (mode == CategoryMode.productType) {
+      _selectedFunctionality = null;
+    } else {
+      _selectedCategory = null;
+    }
+    if (_lastCountry != null) loadProducts(_lastCountry!);
+  }
+
   void setCategory(String? category) {
+    if (_selectedCategory == category) return;
     _selectedCategory = category;
-    notifyListeners();
+    if (_lastCountry != null) loadProducts(_lastCountry!);
   }
 
   void setFunctionality(String? functionality) {
+    if (_selectedFunctionality == functionality) return;
     _selectedFunctionality = functionality;
-    notifyListeners();
+    if (_lastCountry != null) loadProducts(_lastCountry!);
   }
 
   void setBrand(String? brand) {
+    if (_selectedBrand == brand) return;
     _selectedBrand = brand;
-    notifyListeners();
+    if (_lastCountry != null) loadProducts(_lastCountry!);
   }
 
   void setMaxPrice(double? price) {
+    if (_maxPrice == price) return;
     _maxPrice = price;
-    notifyListeners();
+    if (_lastCountry != null) loadProducts(_lastCountry!);
   }
 
   void clearFilters() {
@@ -147,7 +192,6 @@ class ProductProvider extends ChangeNotifier {
     _selectedFunctionality = null;
     _selectedBrand = null;
     _maxPrice = null;
-    notifyListeners();
+    if (_lastCountry != null) loadProducts(_lastCountry!);
   }
 }
-

@@ -1,21 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/country_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/country_selector.dart';
 
-class ProductListScreen extends StatelessWidget {
+class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
+
+  @override
+  State<ProductListScreen> createState() => _ProductListScreenState();
+}
+
+class _ProductListScreenState extends State<ProductListScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent * 0.85) {
+      final countryProvider =
+          context.read<CountryProvider>();
+      final productProvider =
+          context.read<ProductProvider>();
+      productProvider.loadMore(countryProvider.selectedCountry.code);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final countryProvider = context.watch<CountryProvider>();
     final productProvider = context.watch<ProductProvider>();
     final country = countryProvider.selectedCountry;
-    final products =
-        productProvider.filteredProducts(country.code);
+    final products = productProvider.filteredProducts(country.code);
+    final isLoadingMore = productProvider.isLoadingMore;
+    final total = productProvider.total;
+
+    // item count: products + loading spinner slot when fetching next page
+    final itemCount = products.length + (isLoadingMore ? 1 : 0);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -26,13 +61,17 @@ class ProductListScreen extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Skincare',
-                style: TextStyle(
+            Text(AppLocalizations.of(context).appTitle,
+                style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 22,
                     color: Colors.black87)),
-            Text('${products.length} products available',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            Text(
+              total > 0
+                  ? AppLocalizations.of(context).productsAvailable(total)
+                  : AppLocalizations.of(context).productsAvailable(products.length),
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
           ],
         ),
         actions: [
@@ -79,7 +118,7 @@ class ProductListScreen extends StatelessWidget {
                   child: TextField(
                     onChanged: productProvider.search,
                     decoration: InputDecoration(
-                      hintText: 'Search products or brands...',
+                      hintText: AppLocalizations.of(context).searchHint,
                       hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                       prefixIcon:
                           Icon(Icons.search, color: Colors.grey[400], size: 20),
@@ -142,7 +181,7 @@ class ProductListScreen extends StatelessWidget {
                   const Spacer(),
                   TextButton(
                     onPressed: productProvider.clearFilters,
-                    child: Text('Clear all',
+                    child: Text(AppLocalizations.of(context).clearAll,
                         style: TextStyle(
                             color: Colors.pink[400], fontSize: 12)),
                   ),
@@ -161,7 +200,7 @@ class ProductListScreen extends StatelessWidget {
                 Icon(Icons.store, color: Colors.green[700], size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  'Local in ${country.name}: ${country.localStoreNames.join(' · ')}',
+                  AppLocalizations.of(context).localIn(country.name, country.localStoreNames.join(' · ')),
                   style: TextStyle(
                       fontSize: 12,
                       color: Colors.green[800],
@@ -189,13 +228,13 @@ class ProductListScreen extends StatelessWidget {
                                 Icon(Icons.search_off,
                                     size: 64, color: Colors.grey[300]),
                                 const SizedBox(height: 12),
-                                Text('No products found',
+                                Text(AppLocalizations.of(context).noProductsFound,
                                     style: TextStyle(
                                         color: Colors.grey[500],
                                         fontSize: 16,
                                         fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 4),
-                                Text('Pull down to refresh',
+                                Text(AppLocalizations.of(context).pullToRefresh,
                                     style: TextStyle(
                                         color: Colors.grey[400], fontSize: 13)),
                                 if (productProvider.error != null) ...[
@@ -211,6 +250,7 @@ class ProductListScreen extends StatelessWidget {
                       ],
                     )
                   : GridView.builder(
+                      controller: _scrollController,
                       padding: const EdgeInsets.all(12),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
@@ -219,12 +259,23 @@ class ProductListScreen extends StatelessWidget {
                         mainAxisSpacing: 10,
                         childAspectRatio: 0.50,
                       ),
-                      itemCount: products.length,
-                      itemBuilder: (_, i) => ProductCard(
-                        product: products[i],
-                        countryCode: country.code,
-                        currency: country.currency,
-                      ),
+                      itemCount: itemCount,
+                      itemBuilder: (_, i) {
+                        if (i >= products.length) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.pink),
+                            ),
+                          );
+                        }
+                        return ProductCard(
+                          product: products[i],
+                          countryCode: country.code,
+                          currency: country.currency,
+                        );
+                      },
                     ),
             ),
           ),
@@ -297,7 +348,7 @@ class _CategoryChipRow extends StatelessWidget {
               children: [
                 _toggleTab(
                   context,
-                  label: 'Product Type',
+                  label: AppLocalizations.of(context).productType,
                   icon: Icons.category_outlined,
                   selected: isTypeMode,
                   onTap: () => productProvider
@@ -306,7 +357,7 @@ class _CategoryChipRow extends StatelessWidget {
                 const SizedBox(width: 8),
                 _toggleTab(
                   context,
-                  label: 'Functionality',
+                  label: AppLocalizations.of(context).functionality,
                   icon: Icons.auto_awesome_outlined,
                   selected: !isTypeMode,
                   onTap: () => productProvider
