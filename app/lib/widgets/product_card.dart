@@ -148,6 +148,32 @@ class ProductCard extends StatelessWidget {
                       fontSize: 15,
                     ),
                   ),
+                  // Store availability badges
+                  if (product.availableOnline || product.availableInStore) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        if (product.availableOnline)
+                          _StoreBadge(
+                            label: 'SASA Online',
+                            icon: Icons.shopping_bag_outlined,
+                            color: Colors.blue.shade700,
+                            bg: Colors.blue.shade50,
+                            border: Colors.blue.shade200,
+                          ),
+                        if (product.availableInStore)
+                          _StoreBadge(
+                            label: 'SASA Store',
+                            icon: Icons.store_outlined,
+                            color: Colors.green.shade700,
+                            bg: Colors.green.shade50,
+                            border: Colors.green.shade200,
+                          ),
+                      ],
+                    ),
+                  ],
                   if (localStores.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Wrap(
@@ -206,6 +232,45 @@ class ProductCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StoreBadge extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color bg;
+  final Color border;
+
+  const _StoreBadge({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.bg,
+    required this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border.all(color: border, width: 1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }

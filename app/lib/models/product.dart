@@ -23,6 +23,8 @@ class Product {
   final List<String> availableCountries;
   final List<String> onlineStores;
   final Map<String, List<String>> localStores; // country -> store names
+  final bool availableOnline;
+  final bool availableInStore;
 
   const Product({
     required this.id,
@@ -46,6 +48,8 @@ class Product {
     required this.availableCountries,
     required this.onlineStores,
     required this.localStores,
+    this.availableOnline = true,
+    this.availableInStore = true,
   });
 
   bool isAvailableIn(String country) => availableCountries.contains(country);
@@ -106,6 +110,8 @@ class Product {
       availableCountries: countryCode != null ? [countryCode] : [],
       onlineStores: const [],
       localStores: const {},
+      availableOnline: json['available_online'] as bool? ?? true,
+      availableInStore: json['available_in_store'] as bool? ?? true,
     );
   }
 
@@ -161,6 +167,8 @@ class Product {
       availableCountries: availableCountries,
       onlineStores: onlineStoresSet.toList(),
       localStores: localStores,
+      availableOnline: (json['product']?['available_online'] ?? json['available_online']) as bool? ?? true,
+      availableInStore: (json['product']?['available_in_store'] ?? json['available_in_store']) as bool? ?? true,
     );
   }
 }
