@@ -18,7 +18,6 @@ load_dotenv()
 GRAPHQL_URL = "https://apigw.91app.hk/pythia-cdn/graphql"
 SHOP_ID = 17
 CATEGORY_ID = 5886
-LANG = "zh-HK"
 FETCH_COUNT = 100  # products per page
 
 GRAPHQL_QUERY = """
@@ -55,7 +54,7 @@ HEADERS = {
 }
 
 
-def fetch_page(start_index: int, order_by: str = "PageView") -> dict:
+def fetch_page(start_index: int, order_by: str = "PageView", lang: str = "en") -> dict:
     variables = {
         "shopId": SHOP_ID,
         "categoryId": CATEGORY_ID,
@@ -74,7 +73,7 @@ def fetch_page(start_index: int, order_by: str = "PageView") -> dict:
     }
     params = {
         "shopId": SHOP_ID,
-        "lang": LANG,
+        "lang": lang,
         "query": GRAPHQL_QUERY,
         "operationName": "cms_shopCategory",
         "variables": json.dumps(variables, separators=(",", ":")),
@@ -100,9 +99,9 @@ def get_total_size(data: dict) -> int:
         return 0
 
 
-def scrape_all_products(order_by: str = "PageView", dry_run: bool = False) -> list[dict]:
-    print(f"Fetching first page (startIndex=0)...")
-    data = fetch_page(0, order_by)
+def scrape_all_products(order_by: str = "PageView", dry_run: bool = False, lang: str = "en") -> list[dict]:
+    print(f"Fetching first page (startIndex=0, lang={lang})...")
+    data = fetch_page(0, order_by, lang=lang)
     total = get_total_size(data)
     products = parse_products(data)
     print(f"  Total products in category: {total}")
@@ -121,7 +120,7 @@ def scrape_all_products(order_by: str = "PageView", dry_run: bool = False) -> li
         delay = random.uniform(1.5, 3.0)
         time.sleep(delay)
         try:
-            data = fetch_page(start, order_by)
+            data = fetch_page(start, order_by, lang=lang)
             page_products = parse_products(data)
             all_products.extend(page_products)
             print(f"    Got {len(page_products)} → total so far: {len(all_products)}")
@@ -131,7 +130,7 @@ def scrape_all_products(order_by: str = "PageView", dry_run: bool = False) -> li
             print("  Retrying in 5s...")
             time.sleep(5)
             try:
-                data = fetch_page(start, order_by)
+                data = fetch_page(start, order_by, lang=lang)
                 page_products = parse_products(data)
                 all_products.extend(page_products)
                 start += FETCH_COUNT
@@ -141,6 +140,26 @@ def scrape_all_products(order_by: str = "PageView", dry_run: bool = False) -> li
 
     print(f"\nTotal products scraped: {len(all_products)}")
     return all_products
+
+
+def scrape_bilingual(order_by: str = "PageView") -> list[dict]:
+    """Fetch both English and Chinese product lists and merge by salePageId.
+    Returns list of dicts with extra 'title_zh' key alongside English 'title'.
+    """
+    print("=== Fetching English product list ===")
+    en_products = scrape_all_products(order_by=order_by, lang="en")
+    print()
+    print("=== Fetching Chinese product list ===")
+    zh_products = scrape_all_products(order_by=order_by, lang="zh-HK")
+
+    zh_by_id = {p["salePageId"]: p["title"] for p in zh_products}
+
+    merged = []
+    for p in en_products:
+        p["title_zh"] = zh_by_id.get(p["salePageId"], "")
+        merged.append(p)
+    print(f"\nMerged {len(merged)} bilingual products.")
+    return merged
 
 
 def extract_brand(title: str) -> str:
@@ -196,8 +215,11 @@ def save_to_db(products: list[dict], verbose: bool = False) -> None:
         product_url = f"https://www.sasa.com.hk/SalePage/Index/{sale_page_code or sale_page_id}"
         brand = extract_brand(title)
 
+        title_zh = p.get("title_zh", "")
+
         product_data = ProductData(
-            name=title,
+            name=title,        # English name
+            name_zh=title_zh,  # Chinese name
             brand=brand,
             category="skincare",
             image_url=pic_url,
@@ -233,12 +255,14 @@ if __name__ == "__main__":
     parser.add_argument("--no-db", action="store_true", help="Scrape all but don't save to DB")
     args = parser.parse_args()
 
-    products = scrape_all_products(order_by=args.order_by, dry_run=args.dry_run)
-
-    if not args.dry_run and not args.no_db:
-        print("\nSaving to Railway DB...")
-        save_to_db(products)
+    if args.dry_run:
+        scrape_all_products(order_by=args.order_by, dry_run=True)
     elif args.no_db:
+        products = scrape_bilingual(order_by=args.order_by)
         print(f"\nScraped {len(products)} products (no DB save). Sample:")
         for p in products[:10]:
             print(f"  [{p['salePageId']}] {p['title'][:60]} | HKD {p['price']}")
+    else:
+        products = scrape_bilingual(order_by=args.order_by)
+        print("\nSaving to Railway DB...")
+        save_to_db(products)
