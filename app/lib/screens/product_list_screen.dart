@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/country_provider.dart';
+import '../providers/language_provider.dart';
 import '../providers/product_provider.dart';
+import '../utils/locale_labels.dart' as ll;
 import '../widgets/product_card.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/country_selector.dart';
@@ -32,10 +34,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
   void _onScroll() {
     final pos = _scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent * 0.85) {
-      final countryProvider =
-          context.read<CountryProvider>();
-      final productProvider =
-          context.read<ProductProvider>();
+      final countryProvider = context.read<CountryProvider>();
+      final productProvider = context.read<ProductProvider>();
       productProvider.loadMore(countryProvider.selectedCountry.code);
     }
   }
@@ -69,7 +69,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
             Text(
               total > 0
                   ? AppLocalizations.of(context).productsAvailable(total)
-                  : AppLocalizations.of(context).productsAvailable(products.length),
+                  : AppLocalizations.of(context)
+                      .productsAvailable(products.length),
               style: TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
           ],
@@ -80,8 +81,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             onTap: () => _showCountrySelector(context),
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.pink.shade50,
                 borderRadius: BorderRadius.circular(20),
@@ -119,7 +119,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     onChanged: productProvider.search,
                     decoration: InputDecoration(
                       hintText: AppLocalizations.of(context).searchHint,
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      hintStyle:
+                          TextStyle(color: Colors.grey[400], fontSize: 14),
                       prefixIcon:
                           Icon(Icons.search, color: Colors.grey[400], size: 20),
                       filled: true,
@@ -163,16 +164,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
               child: Row(
                 children: [
                   if (productProvider.selectedCategory != null)
-                    _filterChip(
-                        productProvider.selectedCategory!,
+                    _filterChip(productProvider.selectedCategory!,
                         () => productProvider.setCategory(null)),
                   if (productProvider.selectedFunctionality != null)
-                    _filterChip(
-                        productProvider.selectedFunctionality!,
+                    _filterChip(productProvider.selectedFunctionality!,
                         () => productProvider.setFunctionality(null)),
                   if (productProvider.selectedBrand != null)
-                    _filterChip(
-                        productProvider.selectedBrand!,
+                    _filterChip(productProvider.selectedBrand!,
                         () => productProvider.setBrand(null)),
                   if (productProvider.maxPrice != null)
                     _filterChip(
@@ -182,8 +180,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   TextButton(
                     onPressed: productProvider.clearFilters,
                     child: Text(AppLocalizations.of(context).clearAll,
-                        style: TextStyle(
-                            color: Colors.pink[400], fontSize: 12)),
+                        style:
+                            TextStyle(color: Colors.pink[400], fontSize: 12)),
                   ),
                 ],
               ),
@@ -193,14 +191,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
           // Local stores banner
           Container(
             color: Colors.green.shade50,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 Icon(Icons.store, color: Colors.green[700], size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  AppLocalizations.of(context).localIn(country.name, country.localStoreNames.join(' · ')),
+                  AppLocalizations.of(context).localIn(
+                      country.name, country.localStoreNames.join(' · ')),
                   style: TextStyle(
                       fontSize: 12,
                       color: Colors.green[800],
@@ -217,66 +215,71 @@ class _ProductListScreenState extends State<ProductListScreen> {
               child: productProvider.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : products.isEmpty
-                  ? ListView(
-                      children: [
-                        SizedBox(
-                          height: 400,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.search_off,
-                                    size: 64, color: Colors.grey[300]),
-                                const SizedBox(height: 12),
-                                Text(AppLocalizations.of(context).noProductsFound,
-                                    style: TextStyle(
-                                        color: Colors.grey[500],
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500)),
-                                const SizedBox(height: 4),
-                                Text(AppLocalizations.of(context).pullToRefresh,
-                                    style: TextStyle(
-                                        color: Colors.grey[400], fontSize: 13)),
-                                if (productProvider.error != null) ...[
-                                  const SizedBox(height: 8),
-                                  Text(productProvider.error!,
-                                      style: const TextStyle(
-                                          color: Colors.red, fontSize: 12)),
-                                ],
-                              ],
+                      ? ListView(
+                          children: [
+                            SizedBox(
+                              height: 400,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.search_off,
+                                        size: 64, color: Colors.grey[300]),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                        AppLocalizations.of(context)
+                                            .noProductsFound,
+                                        style: TextStyle(
+                                            color: Colors.grey[500],
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                        AppLocalizations.of(context)
+                                            .pullToRefresh,
+                                        style: TextStyle(
+                                            color: Colors.grey[400],
+                                            fontSize: 13)),
+                                    if (productProvider.error != null) ...[
+                                      const SizedBox(height: 8),
+                                      Text(productProvider.error!,
+                                          style: const TextStyle(
+                                              color: Colors.red, fontSize: 12)),
+                                    ],
+                                  ],
+                                ),
+                              ),
                             ),
+                          ],
+                        )
+                      : GridView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(12),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 0.50,
                           ),
+                          itemCount: itemCount,
+                          itemBuilder: (_, i) {
+                            if (i >= products.length) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(24),
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.pink),
+                                ),
+                              );
+                            }
+                            return ProductCard(
+                              product: products[i],
+                              countryCode: country.code,
+                              currency: country.currency,
+                            );
+                          },
                         ),
-                      ],
-                    )
-                  : GridView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(12),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 0.50,
-                      ),
-                      itemCount: itemCount,
-                      itemBuilder: (_, i) {
-                        if (i >= products.length) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(24),
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.pink),
-                            ),
-                          );
-                        }
-                        return ProductCard(
-                          product: products[i],
-                          countryCode: country.code,
-                          currency: country.currency,
-                        );
-                      },
-                    ),
             ),
           ),
         ],
@@ -335,6 +338,7 @@ class _CategoryChipRow extends StatelessWidget {
     final selectedChip = isTypeMode
         ? productProvider.selectedCategory
         : productProvider.selectedFunctionality;
+    final locale = context.watch<LanguageProvider>().locale.languageCode;
 
     return Container(
       color: Colors.white,
@@ -351,8 +355,8 @@ class _CategoryChipRow extends StatelessWidget {
                   label: AppLocalizations.of(context).productType,
                   icon: Icons.category_outlined,
                   selected: isTypeMode,
-                  onTap: () => productProvider
-                      .setCategoryMode(CategoryMode.productType),
+                  onTap: () =>
+                      productProvider.setCategoryMode(CategoryMode.productType),
                 ),
                 const SizedBox(width: 8),
                 _toggleTab(
@@ -380,8 +384,7 @@ class _CategoryChipRow extends StatelessWidget {
                 return GestureDetector(
                   onTap: () {
                     if (isTypeMode) {
-                      productProvider
-                          .setCategory(isSelected ? null : chip);
+                      productProvider.setCategory(isSelected ? null : chip);
                     } else {
                       productProvider
                           .setFunctionality(isSelected ? null : chip);
@@ -389,12 +392,11 @@ class _CategoryChipRow extends StatelessWidget {
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.pink[400]
-                          : Colors.pink.shade50,
+                      color:
+                          isSelected ? Colors.pink[400] : Colors.pink.shade50,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected
@@ -403,12 +405,13 @@ class _CategoryChipRow extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      chip,
+                      isTypeMode
+                          ? ll.localCategory(chip, locale)
+                          : ll.localFunctionality(chip, locale),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color:
-                            isSelected ? Colors.white : Colors.pink[600],
+                        color: isSelected ? Colors.white : Colors.pink[600],
                       ),
                     ),
                   ),
@@ -443,8 +446,7 @@ class _CategoryChipRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                size: 14,
-                color: selected ? Colors.white : Colors.grey[600]),
+                size: 14, color: selected ? Colors.white : Colors.grey[600]),
             const SizedBox(width: 4),
             Text(
               label,

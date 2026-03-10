@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/favorites_provider.dart';
+import '../providers/language_provider.dart';
 import '../screens/product_detail_screen.dart';
+import '../utils/locale_labels.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -21,6 +23,10 @@ class ProductCard extends StatelessWidget {
     final favorites = context.watch<FavoritesProvider>();
     final isFav = favorites.isFavorite(product.id);
     final localStores = product.localStoresIn(countryCode);
+    final locale = context.watch<LanguageProvider>().locale.languageCode;
+    final displayName = product.localName(locale);
+    final displayBrand = product.localBrand(locale);
+    final displayCategory = localCategory(product.category, locale);
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -50,7 +56,8 @@ class ProductCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
                       color: Colors.pink.shade50,
-                      child: const Icon(Icons.spa, size: 60, color: Colors.pink),
+                      child:
+                          const Icon(Icons.spa, size: 60, color: Colors.pink),
                     ),
                   ),
                 ),
@@ -84,7 +91,7 @@ class ProductCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      product.category,
+                      displayCategory,
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
@@ -101,7 +108,7 @@ class ProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.brand,
+                    displayBrand,
                     style: TextStyle(
                       color: Colors.pink.shade400,
                       fontSize: 11,
@@ -110,7 +117,7 @@ class ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    product.name,
+                    displayName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

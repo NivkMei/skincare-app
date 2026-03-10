@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/favorites_provider.dart';
 import 'auth/login_screen.dart';
@@ -25,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final favCount = context.watch<FavoritesProvider>().count;
     final auth = context.watch<AuthProvider>();
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: Stack(
@@ -47,10 +49,10 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.white,
         elevation: 8,
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.spa_outlined),
-            selectedIcon: Icon(Icons.spa),
-            label: 'Products',
+          NavigationDestination(
+            icon: const Icon(Icons.spa_outlined),
+            selectedIcon: const Icon(Icons.spa),
+            label: l10n.products,
           ),
           NavigationDestination(
             icon: Badge(
@@ -63,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label: Text('$favCount'),
               child: const Icon(Icons.favorite),
             ),
-            label: 'Favorites',
+            label: l10n.favoritesTab,
           ),
         ],
       ),
@@ -77,10 +79,12 @@ class _ProfileButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     if (auth.isLoggedIn) {
       return PopupMenuButton<String>(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tooltip: auth.userName ?? 'Account',
+        tooltip: auth.userName ?? l10n.profile,
         child: CircleAvatar(
           radius: 18,
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -98,7 +102,9 @@ class _ProfileButton extends StatelessWidget {
           if (v == 'logout') {
             await context.read<AuthProvider>().logout();
             if (!context.mounted) return;
-            await context.read<FavoritesProvider>().onAuthChanged(isLoggedIn: false);
+            await context
+                .read<FavoritesProvider>()
+                .onAuthChanged(isLoggedIn: false);
           }
         },
         itemBuilder: (_) => [
@@ -108,12 +114,12 @@ class _ProfileButton extends StatelessWidget {
                 style: const TextStyle(color: Colors.grey, fontSize: 12)),
           ),
           const PopupMenuDivider(),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'logout',
             child: Row(children: [
-              Icon(Icons.logout, size: 18),
-              SizedBox(width: 8),
-              Text('Log Out'),
+              const Icon(Icons.logout, size: 18),
+              const SizedBox(width: 8),
+              Text(l10n.logout),
             ]),
           ),
         ],
@@ -122,7 +128,7 @@ class _ProfileButton extends StatelessWidget {
     return IconButton.filled(
       onPressed: () => LoginScreen.show(context),
       icon: const Icon(Icons.person_outline),
-      tooltip: 'Log In',
+      tooltip: l10n.login,
       style: IconButton.styleFrom(
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -130,4 +136,3 @@ class _ProfileButton extends StatelessWidget {
     );
   }
 }
-
