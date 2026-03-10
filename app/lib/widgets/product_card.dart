@@ -141,7 +141,7 @@ class ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '$currency ${product.price.toStringAsFixed(0)}',
+                    product.priceRange(currency),
                     style: TextStyle(
                       color: Colors.pink.shade600,
                       fontWeight: FontWeight.w700,

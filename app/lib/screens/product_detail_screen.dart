@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/product.dart';
 import '../providers/favorites_provider.dart';
 import '../data/ingredient_data.dart';
@@ -21,6 +22,7 @@ class ProductDetailScreen extends StatelessWidget {
     final favorites = context.watch<FavoritesProvider>();
     final isFav = favorites.isFavorite(product.id);
     final localStores = product.localStoresIn(countryCode);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -157,7 +159,7 @@ class ProductDetailScreen extends StatelessWidget {
                           style: const TextStyle(
                               fontWeight: FontWeight.w700, fontSize: 14)),
                       const SizedBox(width: 4),
-                      Text('(${product.reviewCount} reviews)',
+                      Text(l10n.reviews(product.reviewCount),
                           style: TextStyle(
                               color: Colors.grey[500], fontSize: 13)),
                     ],
@@ -166,7 +168,7 @@ class ProductDetailScreen extends StatelessWidget {
 
                   // Price
                   Text(
-                    '$currency ${product.price.toStringAsFixed(0)}',
+                    product.priceRange(currency),
                     style: TextStyle(
                       color: Colors.pink[600],
                       fontWeight: FontWeight.w800,
@@ -178,8 +180,8 @@ class ProductDetailScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Description
-                  const Text('About',
-                      style: TextStyle(
+                  Text(l10n.about,
+                      style: const TextStyle(
                           fontSize: 17, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   Text(product.description,
@@ -190,15 +192,15 @@ class ProductDetailScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Where to Buy
-                  const Text('Where to Buy',
-                      style: TextStyle(
+                  Text(l10n.whereToBuy,
+                      style: const TextStyle(
                           fontSize: 17, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 12),
 
                   // Local Stores
-                  if (localStores.isNotEmpty) ...[
+                  if (localStores.isNotEmpty) ...[  
                     _sectionLabel(
-                        Icons.store, 'Local Stores', Colors.green[700]!),
+                        Icons.store, l10n.localStores, Colors.green[700]!),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -210,18 +212,18 @@ class ProductDetailScreen extends StatelessWidget {
                           .toList(),
                     ),
                     const SizedBox(height: 16),
-                  ] else ...[
+                  ] else ...[  
                     _sectionLabel(
-                        Icons.store, 'Local Stores', Colors.grey[500]!),
+                        Icons.store, l10n.localStores, Colors.grey[500]!),
                     const SizedBox(height: 8),
-                    Text('Not available in local stores for this country.',
+                    Text(l10n.notInLocalStores,
                         style: TextStyle(color: Colors.grey[500], fontSize: 13)),
                     const SizedBox(height: 16),
                   ],
 
                   // Online Stores
                   _sectionLabel(
-                      Icons.laptop, 'Online Stores', Colors.blue[700]!),
+                      Icons.laptop, l10n.onlineStores, Colors.blue[700]!),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -236,8 +238,8 @@ class ProductDetailScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Ingredients
-                  const Text('Ingredients',
-                      style: TextStyle(
+                  Text(l10n.ingredients,
+                      style: const TextStyle(
                           fontSize: 17, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 12),
                   _IngredientTable(ingredients: product.ingredients),
@@ -286,6 +288,7 @@ class _IngredientTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade200),
@@ -302,18 +305,18 @@ class _IngredientTable extends StatelessWidget {
               children: [
                 const SizedBox(width: 22),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   flex: 5,
-                  child: Text('Ingredient',
-                      style: TextStyle(
+                  child: Text(l10n.ingredientCol,
+                      style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: Colors.black54)),
                 ),
-                _headerCell('Function', flex: 5),
-                _headerCell('Acne\nRisk', flex: 2, center: true),
-                _headerCell('Irritant', flex: 2, center: true),
-                _headerCell('Safety', flex: 2, center: true),
+                _headerCell(l10n.functionCol, flex: 5),
+                _headerCell(l10n.acneRiskCol, flex: 2, center: true),
+                _headerCell(l10n.irritantCol, flex: 2, center: true),
+                _headerCell(l10n.safetyCol, flex: 2, center: true),
               ],
             ),
           ),
@@ -424,7 +427,7 @@ class _IngredientTable extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    'Acne Risk & Irritant: 0 = none, 5 = high  ·  Safety: 1 = low concern, 5 = high concern',
+                    l10n.ingredientLegend,
                     style: TextStyle(fontSize: 10, color: Colors.grey[500]),
                   ),
                 ),

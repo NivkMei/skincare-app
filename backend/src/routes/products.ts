@@ -35,6 +35,7 @@ router.get('/', async (req, res, next) => {
       FROM products p
       JOIN product_availability pa ON pa.product_id = p.id
       JOIN countries c ON c.id = pa.country_id AND c.code = $1
+      JOIN stores s ON s.id = pa.store_id
       LEFT JOIN reviews r ON r.product_id = p.id
     `;
     if (maxPrice) {
@@ -81,10 +82,14 @@ router.get('/', async (req, res, next) => {
       p.description, p.ingredients, p.image_url, p.created_at,
       p.name_zh, p.brand_zh, p.category_zh, p.functionalities_zh,
       p.description_zh, p.ingredients_zh,
-      p.available_online, p.available_in_store,
       COALESCE(AVG(DISTINCT r.rating), 0)::numeric(3,1) AS avg_rating,
       COUNT(DISTINCT r.id)::int AS review_count
-      ${countryCode ? ', MIN(pa.price) AS price, MAX(pa.currency) AS currency' : ''}
+      ${countryCode ? `,
+        BOOL_OR(s.type = 'online') AS available_online,
+        BOOL_OR(s.type = 'local')  AS available_in_store,
+        MIN(pa.price) AS min_price,
+        MAX(pa.price) AS max_price,
+        MAX(pa.currency) AS currency` : ''}
     ${fromClause}
     ${whereClause}
     GROUP BY p.id
@@ -145,16 +150,31 @@ router.get(
     );
 
     // Group by country
-    const availabilityByCountry: Record<string, { price: number; currency: string; stores: { id: number; name: string; type: string }[] }> = {};
+    const availabilityByCountry: Record<string, {
+      min_price: number; max_price: number; currency: string;
+      available_online: boolean; available_in_store: boolean;
+      stores: { id: number; name: string; type: string }[];
+    }> = {};
     for (const row of availResult.rows) {
+      const price = Number(row.price);
       if (!availabilityByCountry[row.country_code]) {
         availabilityByCountry[row.country_code] = {
-          price: row.price,
+          min_price: price,
+          max_price: price,
           currency: row.currency,
+          available_online: false,
+          available_in_store: false,
           stores: [],
         };
+      } else {
+        const ca = availabilityByCountry[row.country_code];
+        ca.min_price = Math.min(ca.min_price, price);
+        ca.max_price = Math.max(ca.max_price, price);
       }
-      availabilityByCountry[row.country_code].stores.push({
+      const ca = availabilityByCountry[row.country_code];
+      if (row.store_type === 'online') ca.available_online = true;
+      if (row.store_type === 'local')  ca.available_in_store = true;
+      ca.stores.push({
         id: row.store_id,
         name: row.store_name,
         type: row.store_type,

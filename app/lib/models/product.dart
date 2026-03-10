@@ -15,7 +15,8 @@ class Product {
   final List<String> ingredientsZh;
   final List<String> functionalitiesZh;
   // Pricing / availability
-  final double price;
+  final double minPrice;
+  final double maxPrice;
   final String currency;
   final String imageUrl;
   final double rating;
@@ -40,7 +41,8 @@ class Product {
     this.descriptionZh = '',
     this.ingredientsZh = const [],
     this.functionalitiesZh = const [],
-    required this.price,
+    required this.minPrice,
+    required this.maxPrice,
     required this.currency,
     required this.imageUrl,
     required this.rating,
@@ -54,6 +56,14 @@ class Product {
 
   bool isAvailableIn(String country) => availableCountries.contains(country);
   List<String> localStoresIn(String country) => localStores[country] ?? [];
+
+  /// Returns a formatted price range string, e.g. "HKD 132 – 139".
+  /// When both prices are equal, returns a single price, e.g. "HKD 132".
+  String priceRange(String cur) {
+    final lo = minPrice.toStringAsFixed(0);
+    final hi = maxPrice.toStringAsFixed(0);
+    return lo == hi ? '$cur $lo' : '$cur $lo – $hi';
+  }
 
   /// Returns the localised name, falling back to English.
   String localName(String locale) =>
@@ -102,7 +112,8 @@ class Product {
       descriptionZh: json['description_zh'] as String? ?? '',
       ingredientsZh: List<String>.from(json['ingredients_zh'] ?? []),
       functionalitiesZh: List<String>.from(json['functionalities_zh'] ?? []),
-      price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
+      minPrice: double.tryParse(json['min_price']?.toString() ?? '') ?? 0,
+      maxPrice: double.tryParse(json['max_price']?.toString() ?? '') ?? 0,
       currency: json['currency'] as String? ?? 'HKD',
       imageUrl: json['image_url'] as String? ?? '',
       rating: double.tryParse(json['avg_rating']?.toString() ?? '0') ?? 0,
@@ -136,12 +147,18 @@ class Product {
       }
     }
 
-    double price = 0;
+    double minPrice = 0;
+    double maxPrice = 0;
     String currency = 'HKD';
+    bool availableOnlineFlag = false;
+    bool availableInStoreFlag = false;
     if (countryCode != null && avail.containsKey(countryCode)) {
       final ca = avail[countryCode] as Map<String, dynamic>;
-      price = double.tryParse(ca['price']?.toString() ?? '') ?? 0;
+      minPrice = double.tryParse(ca['min_price']?.toString() ?? '') ?? 0;
+      maxPrice = double.tryParse(ca['max_price']?.toString() ?? '') ?? 0;
       currency = ca['currency'] as String? ?? 'HKD';
+      availableOnlineFlag = ca['available_online'] as bool? ?? false;
+      availableInStoreFlag = ca['available_in_store'] as bool? ?? false;
     }
 
     final product = json['product'] as Map<String, dynamic>? ?? json;
@@ -159,7 +176,8 @@ class Product {
       descriptionZh: product['description_zh'] as String? ?? '',
       ingredientsZh: List<String>.from(product['ingredients_zh'] ?? []),
       functionalitiesZh: List<String>.from(product['functionalities_zh'] ?? []),
-      price: price,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
       currency: currency,
       imageUrl: product['image_url'] as String? ?? '',
       rating: double.tryParse(product['avg_rating']?.toString() ?? '0') ?? 0,
@@ -167,8 +185,8 @@ class Product {
       availableCountries: availableCountries,
       onlineStores: onlineStoresSet.toList(),
       localStores: localStores,
-      availableOnline: (json['product']?['available_online'] ?? json['available_online']) as bool? ?? true,
-      availableInStore: (json['product']?['available_in_store'] ?? json['available_in_store']) as bool? ?? true,
+      availableOnline: availableOnlineFlag,
+      availableInStore: availableInStoreFlag,
     );
   }
 }
