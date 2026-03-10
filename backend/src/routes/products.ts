@@ -79,6 +79,8 @@ router.get('/', async (req, res, next) => {
     SELECT
       p.id, p.name, p.brand, p.category, p.functionalities,
       p.description, p.ingredients, p.image_url, p.created_at,
+      p.name_zh, p.brand_zh, p.category_zh, p.functionalities_zh,
+      p.description_zh, p.ingredients_zh,
       COALESCE(AVG(DISTINCT r.rating), 0)::numeric(3,1) AS avg_rating,
       COUNT(DISTINCT r.id)::int AS review_count
       ${countryCode ? ', MIN(pa.price) AS price, MAX(pa.currency) AS currency' : ''}

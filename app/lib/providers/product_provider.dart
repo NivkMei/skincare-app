@@ -64,11 +64,19 @@ class ProductProvider extends ChangeNotifier {
 
   // ── Load page 1 (reset) ───────────────────────────────────────
   Future<void> loadProducts(String countryCode) async {
+    final countryChanged = _lastCountry != countryCode;
     _lastCountry = countryCode;
     _page = 1;
     _hasMore = false;
     _isLoading = true;
     _error = null;
+    // Clear accumulated filter options only on country switch so that
+    // chips from country A don't bleed into country B's browse session.
+    if (countryChanged) {
+      _knownCategories.clear();
+      _knownFunctionalities.clear();
+      _knownBrands.clear();
+    }
     notifyListeners();
 
     try {
