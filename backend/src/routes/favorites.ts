@@ -13,13 +13,21 @@ router.use(authenticate);
 router.get('/', asyncHandler(async (req, res) => {
   const result = await pool.query(
     `SELECT p.id, p.name, p.brand, p.category, p.functionalities,
-            p.description, p.image_url,
+            p.description, p.name_zh, p.brand_zh, p.category_zh,
+            p.functionalities_zh, p.description_zh, p.image_url,
             COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
             COUNT(DISTINCT r.id)::int AS review_count,
+            BOOL_OR(s.type = 'online') AS available_online,
+            BOOL_OR(s.type = 'local')  AS available_in_store,
+            MIN(pa.price) AS min_price,
+            MAX(pa.price) AS max_price,
+            MAX(pa.currency) AS currency,
             f.created_at AS favorited_at
      FROM favorites f
      JOIN products p ON p.id = f.product_id
      LEFT JOIN reviews r ON r.product_id = p.id
+     LEFT JOIN product_availability pa ON pa.product_id = p.id
+     LEFT JOIN stores s ON s.id = pa.store_id
      WHERE f.user_id = $1
      GROUP BY p.id, f.created_at
      ORDER BY f.created_at DESC`,

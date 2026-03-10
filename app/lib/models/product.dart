@@ -95,6 +95,28 @@ class Product {
           ? functionalitiesZh
           : functionalities;
 
+  // ── JSON parsing helpers ──────────────────────────────────────────────────
+  // The Node.js `pg` library returns NUMERIC columns as strings and booleans
+  // as native booleans. These helpers handle any combination safely.
+  static double _toDouble(dynamic v, {double fallback = 0.0}) {
+    if (v == null) return fallback;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString()) ?? fallback;
+  }
+
+  static int _toInt(dynamic v, {int fallback = 0}) {
+    if (v == null) return fallback;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString()) ?? fallback;
+  }
+
+  static bool _toBool(dynamic v, {bool fallback = false}) {
+    if (v == null) return fallback;
+    if (v is bool) return v;
+    final s = v.toString().toLowerCase();
+    return s == 'true' || s == '1' || s == 't';
+  }
+
   /// Build a Product from the list endpoint response.
   /// When [countryCode] is provided the response includes price/currency.
   factory Product.fromJson(Map<String, dynamic> json, {String? countryCode}) {
@@ -112,17 +134,17 @@ class Product {
       descriptionZh: json['description_zh'] as String? ?? '',
       ingredientsZh: List<String>.from(json['ingredients_zh'] ?? []),
       functionalitiesZh: List<String>.from(json['functionalities_zh'] ?? []),
-      minPrice: double.tryParse(json['min_price']?.toString() ?? '') ?? 0,
-      maxPrice: double.tryParse(json['max_price']?.toString() ?? '') ?? 0,
+      minPrice: _toDouble(json['min_price']),
+      maxPrice: _toDouble(json['max_price']),
       currency: json['currency'] as String? ?? 'HKD',
       imageUrl: json['image_url'] as String? ?? '',
-      rating: double.tryParse(json['avg_rating']?.toString() ?? '0') ?? 0,
-      reviewCount: json['review_count'] as int? ?? 0,
+      rating: _toDouble(json['avg_rating']),
+      reviewCount: _toInt(json['review_count']),
       availableCountries: countryCode != null ? [countryCode] : [],
       onlineStores: const [],
       localStores: const {},
-      availableOnline: json['available_online'] as bool? ?? true,
-      availableInStore: json['available_in_store'] as bool? ?? true,
+      availableOnline: _toBool(json['available_online'], fallback: true),
+      availableInStore: _toBool(json['available_in_store'], fallback: true),
     );
   }
 
@@ -154,11 +176,11 @@ class Product {
     bool availableInStoreFlag = false;
     if (countryCode != null && avail.containsKey(countryCode)) {
       final ca = avail[countryCode] as Map<String, dynamic>;
-      minPrice = double.tryParse(ca['min_price']?.toString() ?? '') ?? 0;
-      maxPrice = double.tryParse(ca['max_price']?.toString() ?? '') ?? 0;
+      minPrice = _toDouble(ca['min_price']);
+      maxPrice = _toDouble(ca['max_price']);
       currency = ca['currency'] as String? ?? 'HKD';
-      availableOnlineFlag = ca['available_online'] as bool? ?? false;
-      availableInStoreFlag = ca['available_in_store'] as bool? ?? false;
+      availableOnlineFlag = _toBool(ca['available_online']);
+      availableInStoreFlag = _toBool(ca['available_in_store']);
     }
 
     final product = json['product'] as Map<String, dynamic>? ?? json;
@@ -180,8 +202,8 @@ class Product {
       maxPrice: maxPrice,
       currency: currency,
       imageUrl: product['image_url'] as String? ?? '',
-      rating: double.tryParse(product['avg_rating']?.toString() ?? '0') ?? 0,
-      reviewCount: product['review_count'] as int? ?? 0,
+      rating: _toDouble(product['avg_rating']),
+      reviewCount: _toInt(product['review_count']),
       availableCountries: availableCountries,
       onlineStores: onlineStoresSet.toList(),
       localStores: localStores,
